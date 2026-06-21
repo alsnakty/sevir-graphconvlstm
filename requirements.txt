@@ -1,0 +1,20 @@
+# Core deep-learning stack
+torch
+torch-geometric
+
+# Numerics / ML
+numpy
+scikit-learn
+
+# Metrics, I/O, visualization
+scikit-image      # SSIM
+h5py==3.11.0      # 3.16.x can raise DLL errors on some setups
+imageio
+pillow
+matplotlib
+
+# Notes:
+# - Install torch + torch-geometric matching your CUDA version (see official docs);
+#   the unpinned entries above let pip resolve a compatible pair, but for GPU you may
+#   need the CUDA-specific wheels.
+# - Tested under a conda env (Python 3.10).
