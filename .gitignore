@@ -15,6 +15,7 @@ checkpoints/
 
 # Gifs / logs (the curated figures/ folder is kept, it holds the README image)
 *.gif
+!figures/forecast_*.gif
 *.log
 *.out
 *.err

@@ -5,11 +5,12 @@ the convolution in the ConvLSTM gates with multi-head graph attention, and recom
 edge weights at every step from a Gaussian similarity between node features. Trained on SEVIR
 VIL frames, 7 frames in and 6 out, at 128x128.
 
-The repo has three folders:
+The repo has four folders:
 
 - `models/` : the data pipeline and the training scripts (main model and the ablations).
 - `analysis/` : metric aggregation, the significance test, and the post-hoc spectral/FSS checks.
-- `figures/` : the sample-forecast image shown at the bottom.
+- `results/` : a couple of example per-seed metric files (see below).
+- `figures/` : the sample forecasts and the animations shown at the bottom.
 
 `models/` and `analysis/` each have a short README.
 
@@ -34,6 +35,10 @@ The paths in the scripts were set for the high-performance computing cluster and
 environment we ran on, so change them for your own machine. Training used mixed precision on
 a single V100 or T4 GPU.
 
+The `results/` folder holds a couple of example metric files (the main model and the
+convolution baseline at one seed) so you can see the output format and the operator
+comparison at a glance. The full per-seed numbers and the tables are in the paper.
+
 A manuscript describing the work is in preparation. Code is under the MIT license.
 
 ## Example forecasts
@@ -43,6 +48,13 @@ on top and the model forecast below, from +10 to +60 min. These are extra exampl
 ones shown in the paper.
 
 ![Example forecasts on three SEVIR test storms](figures/sample_forecasts.png)
+
+Two more test sequences as animations, ground truth against the model forecast over the
+hour:
+
+![Animated forecast, ground truth versus the model](figures/forecast_1.gif)
+
+![Animated forecast, ground truth versus the model](figures/forecast_2.gif)
 
 ## Citation
 
