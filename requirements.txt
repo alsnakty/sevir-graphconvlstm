@@ -4,7 +4,8 @@ torch-geometric
 
 # Numerics / ML
 numpy
-scikit-learn
+scipy             # paired tests (aggregate_ablation), filters (f3_spatial_spectral)
+pandas            # SEVIR catalog handling (05_sevir_dataset)
 
 # Metrics, I/O, visualization
 scikit-image      # SSIM

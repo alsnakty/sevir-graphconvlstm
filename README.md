@@ -10,9 +10,9 @@ The repo has four folders:
 - `models/` : the data pipeline and the training scripts (main model and the ablations).
 - `analysis/` : metric aggregation, the significance test, and the post-hoc spectral/FSS checks.
 - `results/` : a couple of example per-seed metric files (see below).
-- `figures/` : the sample forecasts and the animations shown at the bottom.
+- `figures/` : forecast figures; one is shown at the bottom, the rest are in this folder.
 
-`models/` and `analysis/` each have a short README.
+`models/`, `analysis/`, and `results/` each have a short README.
 
 SEVIR data is not included (it is large and has its own terms). We pulled the VIL files from
 the public SEVIR S3 bucket with the AWS CLI, no account needed:
@@ -49,12 +49,7 @@ ones shown in the paper.
 
 ![Example forecasts on three SEVIR test storms](figures/sample_forecasts.png)
 
-Two more test sequences as animations, ground truth against the model forecast over the
-hour:
-
-![Animated forecast, ground truth versus the model](figures/forecast_1.gif)
-
-![Animated forecast, ground truth versus the model](figures/forecast_2.gif)
+Only one example is shown here; the rest, including two animations, are in `figures/`.
 
 ## Citation
 
