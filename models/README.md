@@ -10,7 +10,12 @@ event filter, and the event-based test split (time_utc >= 2019-06-01).
 `06_sevir_subset_olustur.py` makes a small subset so you can test the pipeline on a laptop.
 
 `15a_graphconvlstm_gat_truba.py` is the main model, the one with the graph-attention gate.
-The seed is read from the `SEED` env var (we ran 42, 123, 456, 789, 2024).
+The seed is read from the `SEED` env var (we ran ten seeds: 17, 42, 123, 271, 456, 789,
+2024, 8675, 13579, 90210).
+
+`15a_graphconvlstm_gat_sigma_probe.py` is the same script with the Gaussian edge-weight
+bandwidth exposed as the `SIGMA` env var (default 1.0). We used it for a single-seed check
+at sigma = 0.5 and 2.0; outputs are tagged `_sigmaX` so they do not overwrite the main run.
 
 `15b_convlstm_gate_truba.py` is the same model and pipeline but the gate is a fixed 3x3
 convolution instead of graph attention. This is the operator ablation, and it also doubles
@@ -20,4 +25,4 @@ as a ConvLSTM baseline trained under our own setup.
 ConvGRU bottleneck, multi-hop graph attention). Used for the capacity ablation.
 
 `13_sevir_graphconvlstm_v5b_truba.py` and the matching `..._kaggle.ipynb` are an earlier
-version of the model (TRUBA script and the Kaggle notebook).
+version of the model (the cluster training script and the Kaggle notebook).

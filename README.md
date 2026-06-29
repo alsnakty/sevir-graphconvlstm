@@ -36,6 +36,11 @@ a single V100 or T4 GPU.
 
 A manuscript describing the work is in preparation. Code is under the MIT license.
 
+## Citation
+
+The paper for this work is in preparation. Once it is published, the citation and a BibTeX
+entry will be added here. Until then, please link to this repository.
+
 ## Example forecasts
 
 Three test storms (a hook-shaped cell, a squall line, and a rotating system), ground truth

@@ -1,96 +1,182 @@
 """
 Faz 3 — operatör ablation sonuç toplama (laptop).
-10 seed-etiketli *_metrics.json (5 GAT + 5 Conv) okur, operatör başına test
-metriklerinin mean ± std'sini hesaplar, GAT vs Conv karşılaştırma tablosu basar
-+ kaba anlamlılık (|Δ| > birleşik std mı).
+Seed-etiketli *_metrics.json (GAT + Conv) okur, operatör başına test
+metriklerinin mean ± std'sini hesaplar ve EŞLİ (paired) istatistik uygular:
+paired t-test (ttest_rel) + Wilcoxon signed-rank (n>=6).
 
-Varsayılan klasör: results/operator_ablation/  (rsync ile indirilen JSON'lar)
-Her JSON kendini tanımlar: top-level "operator" ("GAT"/"Conv") + "seed" + "test" bloğu.
+Neden eşli: aynı seed iki kolda da (GAT + Conv) kullanılıyor → fark dizisi
+d_i = GAT_i - Conv_i seed etkisini sadeleştirir. Bu yüzden bağımsız-grup
+(unpaired) bir kıyas (örn. |Δ| > sqrt(σ_g²+σ_c²)) YANLIŞTIR: korelasyonu ve
+ortalama-farkın standart hatasını (std(d)/sqrt(n)) yok sayar.
+
+Kullanım:
+    python aggregate_ablation.py [JSON_KLASORU]
+Varsayılan: results/operator_ablation/  (rsync ile indirilen JSON'lar)
+Her JSON kendini tanımlar: top-level "operator" ("GAT"/"Conv") + "seed" + "test".
 """
 import os, sys, glob, json
 import numpy as np
+from scipy.stats import ttest_rel, wilcoxon, t as tdist
 
 REPO = r"/path/to/project"
 DEFAULT_DIR = os.path.join(REPO, "results", "operator_ablation")
+# Eksik-seed koruması: final operatör run'da `EXPECT_N=10 python aggregate_ablation.py ...`
+# ver; paired n beklenenden azsa (bir seed FAILED/OOM) gözden kaçmaz uyarı basar.
+EXPECT_N = int(os.environ.get("EXPECT_N", "0"))  # 0 = kontrol kapalı
 
-# Raporlanacak test metrikleri: (JSON anahtarı, görünen ad)
+# (JSON anahtarı, görünen ad, PRIMARY mi)
 METRICS = [
-    ("csi_m",        "CSI-M"),
-    ("csi_pool4_m",  "CSI-pool4"),
-    ("csi_pool16_m", "CSI-pool16"),
-    ("ssim",         "SSIM"),
+    ("csi_m",        "CSI-M",      True),   # ön-tanımlı BİRİNCİL endpoint
+    ("csi_pool4_m",  "CSI-pool4",  False),
+    ("csi_pool16_m", "CSI-pool16", False),
+    ("ssim",         "SSIM",       False),
 ]
 # Ağır threshold'lar (csi_per_threshold listesinden): index 4 = tau181, 5 = tau219
 HEAVY = [(4, "CSI@181"), (5, "CSI@219")]
+# Geçerli bir run'ın test bloğunda bulunması gereken metrikler (+ csi_per_threshold[6])
+REQUIRED_TEST = ("csi_m", "csi_pool4_m", "csi_pool16_m", "ssim")
+
+
+def safe_load(fp):
+    """JSON'u güvenle oku + 'test' bloğu / gerekli metrikleri doğrula. Bozuk veya
+    eksik dosyada LOUD uyarı basıp None döner → run ATLANIR (yarım yazılmış HPC
+    çıktısı tüm aggregation'ı çökertmesin). Düşen seed SANITY + EXPECT_N ile yakalanır."""
+    try:
+        with open(fp, "r", encoding="utf-8") as f:
+            d = json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"  ! BOZUK JSON atlandı ({type(e).__name__}): {os.path.basename(fp)}")
+        return None
+    t = d.get("test")
+    if not isinstance(t, dict):
+        print(f"  ! GEÇERSİZ (test bloğu yok) atlandı: {os.path.basename(fp)}")
+        return None
+    cpt = t.get("csi_per_threshold")
+    if not (isinstance(cpt, list) and len(cpt) == 6):
+        print(f"  ! GEÇERSİZ (csi_per_threshold != 6) atlandı: {os.path.basename(fp)}")
+        return None
+    miss = [k for k in REQUIRED_TEST if k not in t]
+    if miss:
+        print(f"  ! GEÇERSİZ (eksik metrik {miss}) atlandı: {os.path.basename(fp)}")
+        return None
+    return d
 
 
 def load_runs(folder):
-    runs = {"GAT": [], "Conv": []}
-    # düz + alt-klasörler (per-run klasör yapısı) — ikisini de tara
+    """{op: {seed: data}} döndürür — seed bazında, (op,seed) dedup'lu.
+    Bozuk/eksik dosyalar safe_load ile elenir."""
+    runs = {"GAT": {}, "Conv": {}}
     files = sorted(set(glob.glob(os.path.join(folder, "*_metrics.json")) +
                        glob.glob(os.path.join(folder, "**", "*_metrics.json"),
                                  recursive=True)))
     if not files:
         sys.exit(f"JSON bulunamadı: {folder}\\**\\*_metrics.json")
     for fp in files:
-        with open(fp, "r", encoding="utf-8") as f:
-            d = json.load(f)
-        op = d.get("operator")
+        d = safe_load(fp)
+        if d is None:
+            continue
+        op, seed = d.get("operator"), d.get("seed")
         if op not in runs:
             print(f"  ! atlandı (operator '{op}' tanınmadı): {os.path.basename(fp)}")
             continue
-        runs[op].append(d)
-        print(f"  yüklendi: {os.path.basename(fp)}  (operator={op}, seed={d.get('seed')})")
+        if seed is None:
+            print(f"  ! atlandı (seed eksik/None): {os.path.basename(fp)}")
+            continue
+        if seed in runs[op]:
+            print(f"  ! UYARI dup atlandı: {op} seed={seed} ({os.path.basename(fp)})")
+            continue
+        runs[op][seed] = d
+        print(f"  yüklendi: {os.path.basename(fp)}  (operator={op}, seed={seed})")
     return runs
 
 
-def collect(run_list, key, heavy_idx=None):
-    vals = []
-    for d in run_list:
-        t = d["test"]
-        if heavy_idx is None:
-            vals.append(float(t[key]))
-        else:
-            vals.append(float(t["csi_per_threshold"][heavy_idx]))
-    return np.array(vals, dtype=np.float64)
-
-
-def fmt(arr):
-    return f"{arr.mean():.4f} ± {arr.std(ddof=1):.4f}" if len(arr) > 1 else f"{arr.mean():.4f} (n=1)"
+def val(d, key, heavy_idx=None):
+    t = d["test"]
+    return float(t["csi_per_threshold"][heavy_idx]) if heavy_idx is not None else float(t[key])
 
 
 def main():
+    try:  # Windows cp1254 konsolda μ/±/σ çökmesin (Spyder zaten UTF-8)
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
     folder = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_DIR
     print(f"Klasör: {folder}\n")
-    runs = load_runs(folder)
-    n_gat, n_conv = len(runs["GAT"]), len(runs["Conv"])
-    print(f"\nGAT run: {n_gat}  |  Conv run: {n_conv}\n")
-    if n_gat == 0 or n_conv == 0:
-        sys.exit("Her iki operatör için de en az 1 run gerekli.")
+    runs = load_runs(folder)   # yükleme mesajları yalnız stdout (tanı amaçlı)
 
-    print(f"{'Metrik':<12}{'GAT (μ±σ)':<22}{'Conv (μ±σ)':<22}{'Δ(GAT−Conv)':<14}{'|Δ|>σ?':<8}")
-    print("-" * 78)
+    # İstatistik raporu: hem stdout'a bas hem PAIRED_TTEST.txt'e yaz.
+    report = []
+    def P(line=""):
+        print(line)
+        report.append(line)
 
-    rows = list(METRICS) + [(("HEAVY", i), name) for i, name in HEAVY]
-    for key, name in rows:
-        if isinstance(key, tuple) and key[0] == "HEAVY":
-            g = collect(runs["GAT"], None, heavy_idx=key[1])
-            c = collect(runs["Conv"], None, heavy_idx=key[1])
+    gat_seeds, con_seeds = set(runs["GAT"]), set(runs["Conv"])
+    P("=== SANITY ===")
+    P(f"GAT  ({len(gat_seeds)}): {sorted(gat_seeds)}")
+    P(f"Conv ({len(con_seeds)}): {sorted(con_seeds)}")
+    common = sorted(gat_seeds & con_seeds)
+    if gat_seeds != con_seeds:
+        P(f"  ! UYARI: seed kümeleri FARKLI — paired testler KESİŞİM üzerinde "
+          f"(n={len(common)}). Conv'da-yok={sorted(gat_seeds - con_seeds)} "
+          f"GAT'ta-yok={sorted(con_seeds - gat_seeds)}")
+    else:
+        P(f"  OK: seed kümeleri EŞİT (n={len(common)}).")
+    if not common:
+        sys.exit("Ortak seed yok — paired test yapılamaz.")
+    n = len(common)
+    P(f"\nPaired n = {n}  (seed: {common})")
+    if EXPECT_N and n != EXPECT_N:
+        P(f"\n  !! DİKKAT: beklenen n={EXPECT_N} ama paired n={n} — EKSİK SEED.")
+        P(f"      Sonuç '{EXPECT_N}-seed' DEĞİL ({n}-seed). Makaleye yazmadan KONTROL ET.")
+    P()
+
+    P(f"{('Metrik(n='+str(n)+')'):<13}{'GAT μ±σ':<15}{'Conv μ±σ':<15}"
+      f"{'Δ(G−C)':<9}{'%95 GA(Δ)':<22}{'d_z':<6}{'t p':<9}{'W p':<10}")
+    P("-" * 99)
+
+    rows = [(k, nm, pr, None) for k, nm, pr in METRICS] + \
+           [(None, nm, False, idx) for idx, nm in HEAVY]
+    for key, name, primary, hidx in rows:
+        g = np.array([val(runs["GAT"][s],  key, hidx) for s in common], dtype=np.float64)
+        c = np.array([val(runs["Conv"][s], key, hidx) for s in common], dtype=np.float64)
+        d = g - c                                                        # eşli fark dizisi
+        md = d.mean()
+        tp = ttest_rel(g, c).pvalue if n >= 2 else float("nan")          # eşli t
+        if n >= 6 and np.any(d != 0):                                    # sıra-tabanlı
+            # zero_method='zsplit': fark=0 çiftini atmak yerine böler → n sabit, öngörülebilir
+            ws = f"{wilcoxon(g, c, zero_method='zsplit').pvalue:.4f}"
         else:
-            g = collect(runs["GAT"], key)
-            c = collect(runs["Conv"], key)
-        delta = g.mean() - c.mean()
-        # kaba anlamlılık: |Δ| birleşik std'yi (karekök(σ_g²+σ_c²)) aşıyor mu
-        comb = np.sqrt(
-            (g.std(ddof=1) ** 2 if len(g) > 1 else 0.0) +
-            (c.std(ddof=1) ** 2 if len(c) > 1 else 0.0))
-        sig = "evet" if comb > 0 and abs(delta) > comb else "hayır"
-        print(f"{name:<12}{fmt(g):<22}{fmt(c):<22}{delta:+.4f}        {sig:<8}")
+            ws = "n<6"
+        # Δ üzerine paired %95 GA + Cohen's d_z (paired). Dağılım = std(d), std(g)/std(c) DEĞİL.
+        if n > 1:
+            sd_d = d.std(ddof=1)
+            se = sd_d / np.sqrt(n)
+            tcrit = tdist.ppf(0.975, n - 1)
+            ci = f"[{md - tcrit*se:+.4f},{md + tcrit*se:+.4f}]"
+            dz = md / sd_d if sd_d > 0 else float("nan")
+            gm = f"{g.mean():.4f}±{g.std(ddof=1):.4f}"
+            cm = f"{c.mean():.4f}±{c.std(ddof=1):.4f}"
+        else:
+            ci, dz, gm, cm = "(n=1)", float("nan"), f"{g.mean():.4f}", f"{c.mean():.4f}"
+        tag = "  [PRIMARY]" if primary else ""
+        P(f"{name:<13}{gm:<15}{cm:<15}{md:+.4f}  {ci:<22}{dz:<6.2f}{tp:<9.4f}{ws:<10}{tag}")
 
-    print("-" * 78)
-    print("Not: 'Δ' pozitifse GAT üstün. '|Δ|>σ' kaba bir işaret — birleşik std'yi")
-    print("aşan fark gürültü-üstü kabul edilir (kesin test için Welch t-test eklenebilir).")
-    print("Param: GAT 161,505  |  Conv 683,745 (~4×) — efficiency yorumunda kullan.")
+    P("-" * 99)
+    P(f"n = {n} eşli seed.  Δ>0 → GAT üstün.  BİRİNCİL endpoint = CSI-M; "
+      f"diğer 5 ikincil/destekleyici (M1c çerçevesi).")
+    P("Test = paired t (ttest_rel): deney eşli (aynı seed iki kolda). "
+      "Wilcoxon yalnız n>=6 (sıra-tabanlı, normallik varsaymaz).")
+    P("Δ %95 GA = md ± t_{n-1,.975}·std(d)/√n  (paired; dağılım std(d), std(g)+std(c) DEĞİL).")
+    P("d_z = mean(d)/std(d) (paired Cohen's d). DESIGN-SPECIFIC: fark-SD'si kullanır, "
+      "Cohen'in between-group eşikleriyle (0.2/0.5/0.8) kıyaslanamaz (Lakens 2013).")
+    P("μ±σ, Δ ve tüm testler n ORTAK seed üzerinden (kollar eşitse = tam set).")
+    P("std = örnek std (ddof=1).")
+    P("Param: GAT 161,505 | Conv 683,745 (~4×) — parameter-efficiency yorumu.")
+
+    out_path = os.path.join(folder, "PAIRED_TTEST.txt")
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(report) + "\n")
+    print(f"\n[yazıldı] {out_path}")
 
 
 if __name__ == "__main__":
