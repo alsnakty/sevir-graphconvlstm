@@ -36,11 +36,6 @@ a single V100 or T4 GPU.
 
 A manuscript describing the work is in preparation. Code is under the MIT license.
 
-## Citation
-
-The paper for this work is in preparation. Once it is published, the citation and a BibTeX
-entry will be added here. Until then, please link to this repository.
-
 ## Example forecasts
 
 Three test storms (a hook-shaped cell, a squall line, and a rotating system), ground truth
@@ -48,3 +43,8 @@ on top and the model forecast below, from +10 to +60 min. These are extra exampl
 ones shown in the paper.
 
 ![Example forecasts on three SEVIR test storms](figures/sample_forecasts.png)
+
+## Citation
+
+The paper for this work is in preparation. Once it is published, the citation and a BibTeX
+entry will be added here. Until then, please link to this repository.
