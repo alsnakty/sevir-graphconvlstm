@@ -53,5 +53,11 @@ Only one example is shown here; the rest, including two animations, are in `figu
 
 ## Citation
 
-The paper for this work is in preparation. Once it is published, the citation and a BibTeX
-entry will be added here. Until then, please link to this repository.
+A paper describing this work is in preparation. Once it is published, the full citation will
+replace the placeholder below. Until then, please link to this repository.
+
+```bibtex
+@article{graphconvlstm_sevir,
+  note = {The full citation will be added here once the paper is published}
+}
+```

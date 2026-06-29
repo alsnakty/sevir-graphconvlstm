@@ -24,5 +24,4 @@ as a ConvLSTM baseline trained under our own setup.
 `14_sevir_unet_convgru_gat_b1_truba.py` is the larger variant (U-Net encoder/decoder,
 ConvGRU bottleneck, multi-hop graph attention). Used for the capacity ablation.
 
-`13_sevir_graphconvlstm_v5b_truba.py` and the matching `..._kaggle.ipynb` are an earlier
-version of the model (the cluster training script and the Kaggle notebook).
+`13_sevir_graphconvlstm_v5b_truba.py` is an earlier version of the model.

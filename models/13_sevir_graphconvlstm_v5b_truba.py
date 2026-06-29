@@ -1,6 +1,6 @@
 # 13_sevir_graphconvlstm_v5b_truba.py
 #
-# an HPC cluster uyarlaması — 13_sevir_graphconvlstm_v5b_kaggle.ipynb'den farklar:
+# an HPC cluster uyarlaması — Kaggle çalıştırmasından farklar:
 #   - Veri/çıktı yolları /path/to/ altında
 #   - matplotlib Agg backend (plt.show() yok)
 #   - num_workers=8 (V100 16GB)
