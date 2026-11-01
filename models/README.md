@@ -3,6 +3,15 @@
 Data prep and training scripts. Set the data and output paths near the top of each file
 before running.
 
+`02_veri_indir2.py` downloads the SEVIR `CATALOG.csv`, keeps the VIL rows, and saves them as
+`benim_tez_katalogum.csv` in the current folder, so run it from inside `models/`. It also writes
+`verileri_indir.bat`, a Windows batch file with one `aws s3 sync` line per VIL HDF5 file. You
+only need it to rebuild the catalog; the CSV is already here.
+
+`benim_tez_katalogum.csv` is the catalog that `05_sevir_dataset.py` reads: 20,393 VIL rows
+covering 14 HDF5 files from 2017 to 2019. The `pct_missing` filter and the date split are
+applied in `05`, not in this file.
+
 `05_sevir_dataset.py` builds the training tensors from the raw SEVIR HDF5 files: 3x3
 max-pool down to 128x128, the 7->6 framing at 10-minute spacing, the `pct_missing == 0`
 event filter, and the event-based test split (time_utc >= 2019-06-01).

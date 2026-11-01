@@ -24,9 +24,16 @@ We used the 2017 to 2019 VIL STORMEVENTS and RANDOMEVENTS files. After downloadi
 paths in `models/05_sevir_dataset.py` at wherever you saved them. SEVIR is from Veillette et
 al. (2020); see the AWS Open Data registry entry for SEVIR for the full dataset.
 
+The event list we used is in `models/benim_tez_katalogum.csv`: the VIL rows of the SEVIR
+`CATALOG.csv`, otherwise unchanged. `05_sevir_dataset.py` applies the `pct_missing == 0` filter
+and the date cutoff to it (15,116 train/val events and 4,091 test events), so with the fixed
+seed this file pins down all three splits. `models/02_veri_indir2.py` rebuilds it from
+`CATALOG.csv` if you need to.
+
 Rough order to run things:
 
     pip install -r requirements.txt
+    cd models && python 02_veri_indir2.py && cd ..   # optional, the CSV is already in models/
     python models/05_sevir_dataset.py            # HDF5 -> .npy tensors
     SEED=42 python models/15a_graphconvlstm_gat_truba.py
     python analysis/aggregate_ablation.py
