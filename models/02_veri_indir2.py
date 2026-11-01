@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 
-# ---------------- 1. BÖLÜM: KATALOĞU OKUMA VE FİLTRELEME ----------------
+# 1. BÖLÜM: KATALOĞU OKUMA VE FİLTRELEME
 
 print("Katalog indiriliyor ve okunuyor, lütfen bekleyin...")
 catalog_url = "https://sevir.s3.amazonaws.com/CATALOG.csv"
@@ -14,12 +14,10 @@ year_counts = final_veri_listesi['file_name'].str.extract(r'(\d{4})_\d{4}_\d{4}'
 print(f"Yıl dağılımı:\n{year_counts}")
 
  
-# ---------------- 2. BÖLÜM: BİLGİSAYARA KAYDETME VE İNDİRME DOSYASI HAZIRLAMA ----------------
+# 2. BÖLÜM: BİLGİSAYARA KAYDETME VE İNDİRME DOSYASI HAZIRLAMA
 
-# 1. Proje Dizinimiz (Spyder'ın o an çalıştığı mevcut klasör)
+# Proje dizini (betiğin çalıştırıldığı klasör)
 proje_dizini = os.getcwd()
-
-# ---------------- 2. BÖLÜM: BİLGİSAYARA KAYDETME VE İNDİRME DOSYASI HAZIRLAMA ----------------
 
 import os
 proje_dizini = os.getcwd()
